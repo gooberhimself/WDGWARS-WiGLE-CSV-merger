@@ -1,0 +1,6 @@
+# Wardriving exports and generated aggregates may contain sensitive location data.
+*.wigle.csv
+
+# Python cache files
+__pycache__/
+*.py[cod]
