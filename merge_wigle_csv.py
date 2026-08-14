@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import datetime
 import os
 from pathlib import Path
 import sys
@@ -12,7 +13,7 @@ import tempfile
 
 
 DEFAULT_PATTERN = "*.wigle.csv"
-DEFAULT_OUTPUT = "merged.wigle.csv"
+OUTPUT_PREFIX = "merged_"
 EXPECTED_FIRST_COLUMN = "MAC"
 
 
@@ -62,8 +63,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output",
         type=Path,
-        default=Path(DEFAULT_OUTPUT),
-        help=f"output file (default: {DEFAULT_OUTPUT})",
+        help="output file (default: merged_YYYYMMDD_HHMMSS.wigle.csv)",
     )
     parser.add_argument(
         "--deduplicate",
@@ -75,14 +75,18 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    output = args.output.resolve()
+    timestamp = datetime.now().astimezone().strftime("%Y%m%d_%H%M%S")
+    output = (args.output or Path(f"{OUTPUT_PREFIX}{timestamp}.wigle.csv")).resolve()
 
     candidates = args.inputs or sorted(Path.cwd().glob(DEFAULT_PATTERN))
-    excluded_outputs = {output}
     if not args.inputs:
-        # Also ignore the conventional output if a custom -o path is used.
-        excluded_outputs.add((Path.cwd() / DEFAULT_OUTPUT).resolve())
-    inputs = [path for path in candidates if path.resolve() not in excluded_outputs]
+        # Never re-ingest output from this script, including its old default name.
+        candidates = [
+            path
+            for path in candidates
+            if path.name != "merged.wigle.csv" and not path.name.startswith(OUTPUT_PREFIX)
+        ]
+    inputs = [path for path in candidates if path.resolve() != output]
     if not inputs:
         print(f"Error: no input files matched {DEFAULT_PATTERN}", file=sys.stderr)
         return 1

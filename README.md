@@ -10,9 +10,9 @@ python3 merge_wigle_csv.py
 ```
 
 The script combines every `*.wigle.csv` file in that directory into
-`merged.wigle.csv`. It keeps the WiGLE metadata and column header only once,
-checks that all files have compatible columns, and never includes its own output
-when you run it again.
+a timestamped file such as `merged_20260813_171530.wigle.csv`. It keeps the
+WiGLE metadata and column header only once, checks that all files have compatible
+columns, and never includes earlier merged outputs when you run it again.
 
 To remove rows that are exactly identical, use:
 
