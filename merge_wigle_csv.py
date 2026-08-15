@@ -70,6 +70,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="remove rows that are exactly identical in multiple files",
     )
+    parser.add_argument(
+        "--keep-source-files",
+        action="store_true",
+        help="keep the source CSV files instead of deleting them after a successful merge",
+    )
     return parser.parse_args()
 
 
@@ -139,6 +144,8 @@ def main() -> int:
             writer = csv.writer(destination, lineterminator="\n")
             writer.writerow(header)
             writer.writerows(merged_rows)
+            destination.flush()
+            os.fsync(destination.fileno())
         os.replace(temporary_name, output)
     finally:
         if temporary_name and os.path.exists(temporary_name):
@@ -148,6 +155,23 @@ def main() -> int:
     if args.deduplicate:
         summary += f" Removed {duplicate_count:,} exact duplicate rows."
     print(summary)
+
+    if not args.keep_source_files:
+        deletion_errors: list[str] = []
+        deleted_count = 0
+        for path in inputs:
+            try:
+                path.unlink()
+                deleted_count += 1
+            except OSError as exc:
+                deletion_errors.append(f"{path}: {exc}")
+
+        print(f"Deleted {deleted_count} of {len(inputs)} source files.")
+        if deletion_errors:
+            print("The merged output is safe, but some sources could not be deleted:", file=sys.stderr)
+            for error in deletion_errors:
+                print(f"  {error}", file=sys.stderr)
+            return 1
     return 0
 
 
